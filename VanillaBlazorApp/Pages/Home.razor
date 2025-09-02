@@ -1,7 +1,108 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Salary Calculator</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container">
+	<div class="row justify-content-center">
+		<div class="col-sm-6">
+			<div class="card p-4 my-2 shadow">
+				<EditForm Model="@this" OnValidSubmit="CalculateSalary">
+					<DataAnnotationsValidator />
+					<div class="mb-3">
+						<label for="baseSalary" class="form-label">Base Salary (THB)</label>
+						<InputNumber id="baseSalary" class="form-control" @bind-Value="BaseSalary" />
+					</div>
+					<div class="mb-3">
+						<label for="otherAllowance" class="form-label">Other Allowance (THB)</label>
+						<InputNumber id="otherAllowance" class="form-control" @bind-Value="OtherAllowance" />
+					</div>
+					<div class="mb-3">
+						<label for="otNormalDays" class="form-label">OT Normal Days</label>
+						<InputNumber id="otNormalDays" class="form-control" @bind-Value="OtNormalDays" />
+					</div>
+					<div class="mb-3">
+						<label for="otHolidayDays" class="form-label">OT Holiday Days</label>
+						<InputNumber id="otHolidayDays" class="form-control" @bind-Value="OtHolidayDays" />
+					</div>
+					<div class="mb-3">
+						<label for="leaveDays" class="form-label">Leave Days</label>
+						<InputNumber id="leaveDays" class="form-control" @bind-Value="LeaveDays" />
+					</div>
+					<div class="mb-3">
+						<label for="socialSecurity" class="form-label">Social Security (THB)</label>
+						<InputNumber id="socialSecurity" class="form-control" @bind-Value="SocialSecurity" />
+					</div>
+					<button type="submit" class="btn btn-primary w-100 mt-3">Calculate Salary</button>
+				</EditForm>
+			</div>
+		</div>
+		<div class="col-sm-6">
+			@if (HasCalculated)
+			{
+				<div class="card p-4 my-2 shadow">
+					<h4 class="mb-3">Salary Breakdown</h4>
+					<h5 class="text-primary">Total Net Salary: **@Result.ToString("N2") THB**</h5>
+					<hr class="my-4" />
+					<h6>**Earnings:**</h6>
+					<p>- Base Salary: @BaseSalary.ToString("N2") THB</p>
+					<p>- Other Allowance: @OtherAllowance.ToString("N2") THB</p>
+					<p>- OT Pay (Normal): @OtNormalPay.ToString("N2") THB</p>
+					<p>- OT Pay (Holiday): @OtHolidayPay.ToString("N2") THB</p>
+					<p>- Holiday Pay: @HolidayPay.ToString("N2") THB</p>
+					<p>- Travel Allowance: @TravelAllowance.ToString("N2") THB</p>
+					<p>- Accommodation Allowance: @AccommodationAllowance.ToString("N2") THB</p>
+					<h6 class="mt-4">**Deductions:**</h6>
+					<p>- Total Leave Deduction: @TotalLeaveDeduction.ToString("N2") THB</p>
+					<p>- Social Security Deduction: @SocialSecurity.ToString("N2") THB</p>
+				</div>
+			}
+		</div>
+	</div>
+</div>
 
-Welcome to your new app.
+@code {
+	public double BaseSalary { get; set; }
+	public double OtherAllowance { get; set; }
+	public int OtNormalDays { get; set; }
+	public int OtHolidayDays { get; set; }
+	public int LeaveDays { get; set; }
+	public double SocialSecurity { get; set; }
+	public double Result { get; set; }
+
+	// Breakdown variables
+	public double OtNormalPay { get; set; }
+	public double OtHolidayPay { get; set; }
+	public double HolidayPay { get; set; }
+	public double TravelAllowance { get; set; }
+	public double AccommodationAllowance { get; set; }
+	public double TotalLeaveDeduction { get; set; }
+
+	public bool HasCalculated { get; set; } = false;
+
+	private void CalculateSalary()
+	{
+		double hourlyRate = BaseSalary / 30 / 8.5;
+		double dailyRate = BaseSalary / 30;
+
+		// Calculate OT Pay
+		OtNormalPay = hourlyRate * 1.5 * (OtNormalDays * 2);
+		OtHolidayPay = hourlyRate * 3.0 * (OtHolidayDays * 2);
+
+		// Calculate Holiday Pay
+		HolidayPay = dailyRate * OtHolidayDays;
+
+		// Calculate Allowances
+		TravelAllowance = Math.Max(0, (22 - LeaveDays) * 50);
+		AccommodationAllowance = Math.Max(0, (30 - LeaveDays) * 40);
+
+		// Calculate Deductions
+		double baseSalaryDeduction = (BaseSalary / 30) * LeaveDays;
+		double otherAllowanceDeduction = (OtherAllowance / 30) * LeaveDays;
+		TotalLeaveDeduction = baseSalaryDeduction + otherAllowanceDeduction;
+
+		// Calculate Final Salary
+		Result = (BaseSalary - baseSalaryDeduction) + (OtherAllowance - otherAllowanceDeduction) + OtNormalPay + OtHolidayPay + HolidayPay + TravelAllowance + AccommodationAllowance - SocialSecurity;
+
+		HasCalculated = true;
+	}
+}
